@@ -1,0 +1,20 @@
+[project]
+name = "board-stage"
+version = "0.1.0"
+description = "Generic Ender 3 XY(Z) positioning library: raw motion, board-frame calibration, obstacle-avoiding routing."
+requires-python = ">=3.11"
+dependencies = [
+    "pyserial>=3.5",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.5"]
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "board_stage" = "." }
+packages = ["board_stage"]
