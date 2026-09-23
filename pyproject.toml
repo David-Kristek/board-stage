@@ -15,6 +15,5 @@ plot = ["matplotlib>=3.5"]
 requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-package-dir = { "board_stage" = "." }
-packages = ["board_stage"]
+[tool.setuptools.packages.find]
+where = ["src"]

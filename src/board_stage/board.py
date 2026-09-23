@@ -164,3 +164,41 @@ class Board:
                     first = False
 
         self.park()
+
+
+def _terminal_confirm(prompt: str) -> bool:
+    """Default `confirm` callback: ask on the terminal; Enter (or y/yes) means yes."""
+    return input(f"{prompt} [Y/n] ").strip().lower() in {"", "y", "yes"}
+
+
+def setup_board(
+    board: Board,
+    reference_id: str = "solution",
+    *,
+    force_calibrate: bool = False,
+    confirm: Optional[Callable[[str], bool]] = None,
+    notify: Callable[[str], None] = print,
+) -> bool:
+    """Hover over `reference_id` and confirm the printer is calibrated, homing if
+    needed (or if `force_calibrate`). Must run inside `with board:`. Returns True
+    if calibration ran. Override `confirm`/`notify` to drive it from a UI or test."""
+    board.validate_object_id(reference_id)
+    confirm = confirm or _terminal_confirm
+    notify("Make sure there is nothing in the way of the pen.")
+
+    def pen_over(object_id: str) -> bool:
+        board.move_to_object(object_id, descend=False)
+        return confirm(f"Is the pen over {object_id!r}?")
+
+    if not force_calibrate and pen_over(reference_id):
+        return False
+
+    notify("Calibration is needed. Check nothing is in the way of the pen.")
+    board.printer.calibrate()
+    notify("Printer calibrated.")
+    if not pen_over(reference_id):
+        raise ValueError(
+            f"Calibration failed: the pen is not over {reference_id!r}. "
+            f"Check the board layout for correct {reference_id!r} coordinates."
+        )
+    return True

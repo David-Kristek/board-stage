@@ -7,7 +7,7 @@ from board_stage.printer import (
     AnyPoint,
     Point,
 )
-from board_stage.board import Board
+from board_stage.board import Board, setup_board
 from board_stage.board_config import (
     Action,
     SinglePointAction,
@@ -29,6 +29,7 @@ __all__ = [
     "AnyPoint",
     "Point",
     "Board",
+    "setup_board",
     "Action",
     "SinglePointAction",
     "CenterAction",
