@@ -28,6 +28,14 @@ Plotting extras for `visualize.py`:
 pip install -e ".[plot]"
 ```
 
+## Development
+
+```bash
+pip install -e ".[dev]"
+ruff format .
+ruff check .
+```
+
 ## Quickstart
 
 Describe the board once, then drive the pen to named objects. Action points are
@@ -35,22 +43,39 @@ local to each object and translated to the board frame for you.
 
 ```python
 from board_stage import (
-    Board, BoardConfig, BoardObject, BoardPoint, Ender3_printer,
-    GridAction, Pen, PrinterPoint, SinglePointAction, setup_board,
+    Board,
+    BoardConfig,
+    BoardObject,
+    BoardPoint,
+    Ender3_printer,
+    GridAction,
+    Pen,
+    PrinterPoint,
+    SinglePointAction,
+    setup_board,
 )
 
 brass = BoardObject(
-    id="brass", x=130.0, y=9.0, width=99.0, height=65.0, safe_z=10.0,
-    actions=[
-        GridAction(start=BoardPoint(x=5.0, y=30.0), end=BoardPoint(x=95.0, y=30.0), steps=10, z=1.0)
-    ],
+    id="brass",
+    x=130.0,
+    y=9.0,
+    width=99.0,
+    height=65.0,
+    safe_z=10.0,
+    actions=[GridAction(start=BoardPoint(x=5.0, y=30.0), end=BoardPoint(x=95.0, y=30.0), steps=10, z=1.0)],
 )
 
 board_config = BoardConfig(
     pen=Pen(width=2.0),
     objects={
         "solution": BoardObject(
-            id="solution", x=0.0, y=0.0, width=40.0, height=40.0, safe_z=55.0, margin=5.0,
+            id="solution",
+            x=0.0,
+            y=0.0,
+            width=40.0,
+            height=40.0,
+            safe_z=55.0,
+            margin=5.0,
             default_action=SinglePointAction(point=BoardPoint(x=25.0, y=25.0, z=23.0)),
         ),
         "brass": brass,
@@ -85,7 +110,7 @@ it; if not (or `force_calibrate=True`) it homes and checks again, raising
 from a UI or test instead of the terminal:
 
 ```python
-setup_board(board, reference_id="solution", confirm=my_ui.ask_yes_no, notify=my_ui.log)
+setup_board(board, reference_id="solution")
 ```
 
 ## Dry run and visualization
@@ -98,11 +123,13 @@ from board_stage.visualize import animate, plot_layout
 
 plot_layout(board_config, highlight_id="brass")
 
+
 def cycle(printer, board):
     with board.at("solution"):
         pass
     with board.at("brass", action_index=0):
         pass
+
 
 board = dry_run(board_config, cycle, bed_width=230)
 animate(board.printer.history, board, board.printer, highlight_id="brass")
@@ -136,8 +163,25 @@ board-stage/
 
 ```python
 from board_stage import (
-    Printer, Ender3_printer, BasePoint, BoardPoint, PrinterPoint, AnyPoint, Point,
-    Board, setup_board, Action, SinglePointAction, CenterAction, GridAction,
-    BoardConfig, BoardObject, Pen, Rect, find_path, NullPrinter, dry_run,
+    Printer,
+    Ender3_printer,
+    BasePoint,
+    BoardPoint,
+    PrinterPoint,
+    AnyPoint,
+    Point,
+    Board,
+    setup_board,
+    Action,
+    SinglePointAction,
+    CenterAction,
+    GridAction,
+    BoardConfig,
+    BoardObject,
+    Pen,
+    Rect,
+    find_path,
+    NullPrinter,
+    dry_run,
 )
 ```

@@ -6,9 +6,10 @@ and records every commanded board-frame position so visualize.py can
 replay a Board move sequence with no printer attached.
 """
 
-from typing import Callable, Any
+from typing import Any, Callable
+
 from board_stage.board import Board
-from board_stage.printer import BoardPoint, PrinterPoint, AnyPoint
+from board_stage.printer import AnyPoint, BoardPoint, PrinterPoint
 
 
 class NullPrinter:

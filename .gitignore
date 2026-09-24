@@ -4,5 +4,7 @@ __pycache__/
 .uv/
 *.pyc
 .pytest_cache/
+.ruff_cache/
 dist/
 build/
+opencode.jsonc

@@ -1,12 +1,9 @@
-from dataclasses import dataclass
-from serial import Serial
-import time
-from enum import Enum
 import re
-
-
+import time
 from dataclasses import dataclass
 from typing import TypeVar
+
+from serial import Serial
 
 T = TypeVar("T", bound="BasePoint")
 
@@ -173,9 +170,7 @@ class Printer:
             if position is None:
                 values = {}
                 for axis in ("X", "Y", "Z"):
-                    match = re.search(
-                        r"(?:^|\s)" + axis + r":\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+))", line
-                    )
+                    match = re.search(r"(?:^|\s)" + axis + r":\s*([-+]?(?:\d+(?:\.\d*)?|\.\d+))", line)
                     if match:
                         values[axis] = float(match.group(1))
                 if len(values) == 3:
@@ -191,7 +186,6 @@ class Printer:
         # Ukládáme do nové proměnné pro interní stav
         self._current_printer_pos = position
         return self.current
-
 
     # --------------------------------------------------
     # Home / close
@@ -213,4 +207,3 @@ class Printer:
 # Backwards compatibility aliases
 Ender3_printer = Printer
 Point = BoardPoint
-

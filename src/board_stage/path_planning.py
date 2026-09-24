@@ -7,7 +7,7 @@ stripping Z-coordinates if 3D points are passed in.
 import heapq
 import math
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Iterable
+from typing import Iterable, List, Optional, Tuple
 
 # Using a generic Iterable to accept tuples, lists, or BoardPoints
 PointLike = Iterable[float]

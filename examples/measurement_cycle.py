@@ -24,12 +24,7 @@ from board_stage import (
     setup_board,
 )
 
-brass_action = GridAction(
-    start=BoardPoint(x=5.0, y=30.0), end=BoardPoint(x=95.0, y=30.0), steps=10, z=1.0
-)
-dryer_action = GridAction(
-    start=BoardPoint(x=10.0, y=35.0), end=BoardPoint(x=20.0, y=40.0), steps=10, z=6.0
-)
+brass_action = GridAction(start=BoardPoint(x=5.0, y=30.0), end=BoardPoint(x=95.0, y=30.0), steps=10, z=1.0)
 
 board_config = BoardConfig(
     pen=Pen(width=2.0),
@@ -51,7 +46,7 @@ board_config = BoardConfig(
             width=30.0,
             height=55.0,
             safe_z=15.0,
-            default_action=dryer_action,
+            default_action=SinglePointAction(point=BoardPoint(x=15.0, y=50.0, z=6.0)),
         ),
         "brass": BoardObject(
             id="brass",
@@ -70,12 +65,15 @@ def cycle(printer, board: Board) -> None:
     """Dip, air-dry twice, then measure at every brass point."""
     board.park()
 
-    num_dryer_points = len(board.objects["dryer"].local_action_points)
+    dryer = board.objects["dryer"]
     for i in range(len(board.objects["brass"].local_action_points)):
         with board.at("solution"):
             pass
         for _ in range(2):
-            with board.at("dryer", action_index=random.randrange(num_dryer_points)):
+            # random point in the top-centre of the dryer
+            x = random.uniform(dryer.width / 2 - 5, dryer.width / 2 + 5)
+            y = random.uniform(dryer.height - 10, dryer.height - 5)
+            with board.at("dryer", coords=(x, y)):
                 pass
         with board.at("brass", action_index=i):
             pass  # run the measurement here

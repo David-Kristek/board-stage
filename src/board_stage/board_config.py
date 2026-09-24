@@ -1,15 +1,19 @@
-from typing import Dict, List, Sequence
 from abc import ABC, abstractmethod
+from typing import Dict, List, Sequence
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from board_stage.path_planning import Rect
 from board_stage.printer import BoardPoint
 
+
 class FrozenModel(BaseModel):
     model_config = ConfigDict(frozen=True)
 
+
 class Pen(FrozenModel):
     width: float = 0.0
+
 
 class Action(BaseModel, ABC):
     model_config = ConfigDict(frozen=True)
@@ -19,11 +23,13 @@ class Action(BaseModel, ABC):
         """Resolves local points relative to the object's origin (0, 0)."""
         pass
 
+
 class SinglePointAction(Action):
     point: BoardPoint
 
     def resolve(self, obj: "BoardObject") -> Sequence[BoardPoint]:
         return [self.point]
+
 
 class CenterAction(Action):
     z: float
@@ -31,6 +37,7 @@ class CenterAction(Action):
     def resolve(self, obj: "BoardObject") -> Sequence[BoardPoint]:
         cx, cy = obj.width / 2.0, obj.height / 2.0
         return [BoardPoint(x=cx, y=cy, z=self.z)]
+
 
 class GridAction(Action):
     start: BoardPoint
@@ -46,6 +53,7 @@ class GridAction(Action):
         dy = (self.end.y - self.start.y) / (self.steps - 1)
         return [BoardPoint(x=self.start.x + i * dx, y=self.start.y + i * dy, z=self.z) for i in range(self.steps)]
 
+
 class BoardObject(FrozenModel):
     id: str
     x: float
@@ -59,7 +67,10 @@ class BoardObject(FrozenModel):
 
     @property
     def local_action_points(self) -> List[BoardPoint]:
-        """Returns the list of action points in local coordinates (relative to the object's origin). If no actions are defined, returns the default action point."""
+        """Action points in local coordinates (relative to the object's origin).
+
+        Falls back to the default action's point when no actions are defined.
+        """
         all_actions = [self.default_action] if not self.actions else self.actions
         return [pt for act in all_actions for pt in act.resolve(self)]
 
@@ -70,9 +81,7 @@ class BoardObject(FrozenModel):
 
     def get_rect(self, pen: Pen) -> Rect:
         """Computes the footprint dynamically based on current state and pen width."""
-        return Rect(self.x, self.x + self.width, self.y, self.y + self.height).inflated(
-            self.margin + pen.width / 2
-        )
+        return Rect(self.x, self.x + self.width, self.y, self.y + self.height).inflated(self.margin + pen.width / 2)
 
     @model_validator(mode="after")
     def _validate_points_within_bounds(self) -> "BoardObject":
@@ -84,12 +93,14 @@ class BoardObject(FrozenModel):
                 )
         return self
 
+
 def _check_not_below_board(z: float, what: str):
     if z < 0:
         raise ValueError(
             f"{what} is {z}, but board-frame Z can't go below 0 (0 = "
             f"touching the board surface). Check your board layout."
         )
+
 
 class BoardConfig(FrozenModel):
     objects: Dict[str, BoardObject]
@@ -119,7 +130,7 @@ class BoardConfig(FrozenModel):
         """Check that no two objects overlap (including their margins)."""
         objs = list(self.objects.values())
         rects = [obj.get_rect(self.pen) for obj in objs]
-        
+
         for i, obj1 in enumerate(objs):
             for j, obj2 in enumerate(objs):
                 if i >= j:

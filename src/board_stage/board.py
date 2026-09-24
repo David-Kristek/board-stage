@@ -1,10 +1,10 @@
-from dataclasses import dataclass
 from contextlib import ExitStack, contextmanager
 from typing import Callable, Optional
 
 from board_stage.board_config import BoardConfig
-from board_stage.printer import Printer, Ender3_printer, BoardPoint
 from board_stage.path_planning import find_path
+from board_stage.printer import BoardPoint, Printer
+
 
 class Board:
     def __init__(self, printer: Printer, board_config: BoardConfig):
@@ -122,7 +122,6 @@ class Board:
             print(f"Descending onto {object_id}: Z={descend_to}")
             pen = self.printer.current
             self.printer.move_absolute(BoardPoint(pen.x, pen.y, descend_to), feedrate=feedrate)
-
 
     @contextmanager
     def at(
