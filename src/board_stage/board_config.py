@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from typing import Dict, List, Sequence
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from board_stage.path_planning import Rect
-from board_stage.printer import BoardPoint
+from board_stage.printer import BoardPoint, Point
 
 
 class FrozenModel(BaseModel):
@@ -54,6 +55,40 @@ class GridAction(Action):
         return [BoardPoint(x=self.start.x + i * dx, y=self.start.y + i * dy, z=self.z) for i in range(self.steps)]
 
 
+@dataclass(frozen=True)
+class ActionPoint:
+    """One resolved point: `local` is object-relative, `board` is absolute."""
+
+    object_id: str
+    index: int
+    local: Point
+    board: BoardPoint
+    action: Action = field(compare=False, repr=False)
+
+    def __repr__(self) -> str:
+        local = f"({self.local.x}, {self.local.y}, {self.local.z})"
+        board = f"({self.board.x}, {self.board.y}, {self.board.z})"
+        return f"ActionPoint({self.object_id!r}, index={self.index}, local={local}, board={board})"
+
+    __str__ = __repr__
+
+
+def _resolve_action_points(obj: "BoardObject", actions: Sequence[Action]) -> List[ActionPoint]:
+    points: List[ActionPoint] = []
+    for action in actions:
+        for local in action.resolve(obj):
+            points.append(
+                ActionPoint(
+                    object_id=obj.id,
+                    index=len(points),
+                    local=local,
+                    board=BoardPoint(x=obj.x + local.x, y=obj.y + local.y, z=local.z),
+                    action=action,
+                )
+            )
+    return points
+
+
 class BoardObject(FrozenModel):
     id: str
     x: float
@@ -66,18 +101,24 @@ class BoardObject(FrozenModel):
     actions: List[Action] = Field(default_factory=list)
 
     @property
-    def local_action_points(self) -> List[BoardPoint]:
-        """Action points in local coordinates (relative to the object's origin).
+    def action_points(self) -> List[ActionPoint]:
+        """Resolved `actions` in visit order; `default_action` is not included."""
+        return _resolve_action_points(self, self.actions)
 
-        Falls back to the default action's point when no actions are defined.
-        """
-        all_actions = [self.default_action] if not self.actions else self.actions
-        return [pt for act in all_actions for pt in act.resolve(self)]
+    @property
+    def default_action_point(self) -> ActionPoint:
+        """The fallback target, resolved from `default_action`."""
+        return _resolve_action_points(self, [self.default_action])[0]
+
+    @property
+    def local_action_points(self) -> List[BoardPoint]:
+        """`action_points` in local coordinates."""
+        return [point.local for point in self.action_points]
 
     @property
     def board_action_points(self) -> List[BoardPoint]:
-        """Returns the list of action points in board coordinates (absolute)."""
-        return [BoardPoint(x=self.x + pt.x, y=self.y + pt.y, z=pt.z) for pt in self.local_action_points]
+        """`action_points` in absolute board coordinates."""
+        return [point.board for point in self.action_points]
 
     def get_rect(self, pen: Pen) -> Rect:
         """Computes the footprint dynamically based on current state and pen width."""
@@ -85,7 +126,7 @@ class BoardObject(FrozenModel):
 
     @model_validator(mode="after")
     def _validate_points_within_bounds(self) -> "BoardObject":
-        for pt in self.local_action_points:
+        for pt in self.local_action_points + [self.default_action_point.local]:
             if not (0 <= pt.x <= self.width and 0 <= pt.y <= self.height):
                 raise ValueError(
                     f"Action point ({pt.x}, {pt.y}) in object '{self.id}' "
@@ -110,7 +151,7 @@ class BoardConfig(FrozenModel):
     def _check_z_not_below_board(self) -> "BoardConfig":
         for obj in self.objects.values():
             _check_not_below_board(obj.safe_z, f"Object {obj.id!r} safe_z")
-            for pt in obj.local_action_points:
+            for pt in obj.local_action_points + [obj.default_action_point.local]:
                 _check_not_below_board(pt.z, f"Object {obj.id!r} action point Z")
         return self
 

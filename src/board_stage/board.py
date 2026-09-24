@@ -1,7 +1,7 @@
 from contextlib import ExitStack, contextmanager
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
-from board_stage.board_config import BoardConfig
+from board_stage.board_config import ActionPoint, BoardConfig
 from board_stage.path_planning import find_path
 from board_stage.printer import BoardPoint, Printer
 
@@ -30,6 +30,11 @@ class Board:
     def validate_object_id(self, object_id: str):
         if object_id not in self.objects:
             raise ValueError(f"Invalid object id: {object_id!r}.")
+
+    def action_points(self, object_id: str) -> List[ActionPoint]:
+        """Shorthand for `board.objects[object_id].action_points`."""
+        self.validate_object_id(object_id)
+        return self.objects[object_id].action_points
 
     def _keepout_rects(self, travel_z: float, exclude_id: Optional[str] = None):
         return [
@@ -77,39 +82,37 @@ class Board:
     def move_to_object(
         self,
         object_id: str,
-        action_index: int = 0,
+        point: Optional[ActionPoint] = None,
         coords: Optional[tuple[float, float]] = None,
         descend_to: Optional[float] = None,
         feedrate: int = 1000,
         descend: bool = True,
     ):
+        """Move to `point`, to `coords`, or to `default_action` if neither is given."""
         self.validate_object_id(object_id)
         obj = self.objects[object_id]
+        if point is not None and coords is not None:
+            raise ValueError("Pass either point or coords, not both.")
         self._assert_pen_clear()
 
-        if coords is not None:
+        if point is None and coords is None:
+            point = obj.default_action_point
+
+        if point is not None:
+            if point.object_id != object_id:
+                raise ValueError(f"Point belongs to {point.object_id!r}, not {object_id!r}.")
+            target_xy = (obj.x + point.local.x, obj.y + point.local.y)
+            if descend_to is None:
+                descend_to = point.local.z
+        else:
             if not (0 <= coords[0] <= obj.width) or not (0 <= coords[1] <= obj.height):
                 raise ValueError(
                     f"Coordinates {coords} are outside object {object_id!r}'s dimensions "
                     f"(width={obj.width}, height={obj.height})."
                 )
             target_xy = (obj.x + coords[0], obj.y + coords[1])
-
             if descend_to is None:
-                descend_to = obj.local_action_points[0].z
-
-        else:
-            try:
-                target_pt = obj.local_action_points[action_index]
-            except IndexError:
-                raise ValueError(
-                    f"Action index {action_index} is out of range for object {object_id!r}. "
-                    f"Object has {len(obj.local_action_points)} point(s) available."
-                )
-            target_xy = (obj.x + target_pt.x, obj.y + target_pt.y)
-
-            if descend_to is None:
-                descend_to = target_pt.z
+                descend_to = obj.default_action_point.local.z
 
         travel_z = max(self.printer.current.z, obj.safe_z)
         self.printer.move_absolute(
@@ -127,19 +130,14 @@ class Board:
     def at(
         self,
         object_id: str,
-        action_index: int = 0,
+        point: Optional[ActionPoint] = None,
         coords: Optional[tuple[float, float]] = None,
         descend_to: Optional[float] = None,
         feedrate: int = 1000,
         descend: bool = True,
     ):
         self.move_to_object(
-            object_id,
-            action_index=action_index,
-            coords=coords,
-            descend_to=descend_to,
-            feedrate=feedrate,
-            descend=descend,
+            object_id, point=point, coords=coords, descend_to=descend_to, feedrate=feedrate, descend=descend
         )
         try:
             yield self.objects[object_id]

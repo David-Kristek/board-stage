@@ -75,8 +75,8 @@ def simulate(board: Board, object_ids):
     for object_id in object_ids:
         obj = board.objects[object_id]
         # Visit every action point configured for this object
-        for action_index in range(len(obj.local_action_points)):
-            board.move_to_object(object_id, action_index=action_index)
+        for point in obj.action_points:
+            board.move_to_object(object_id, point=point)
             board.retract_from(object_id)
 
     return board.printer.history

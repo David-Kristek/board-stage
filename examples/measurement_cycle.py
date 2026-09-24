@@ -66,7 +66,7 @@ def cycle(printer, board: Board) -> None:
     board.park()
 
     dryer = board.objects["dryer"]
-    for i in range(len(board.objects["brass"].local_action_points)):
+    for point in board.action_points("brass"):
         with board.at("solution"):
             pass
         for _ in range(2):
@@ -75,7 +75,7 @@ def cycle(printer, board: Board) -> None:
             y = random.uniform(dryer.height - 10, dryer.height - 5)
             with board.at("dryer", coords=(x, y)):
                 pass
-        with board.at("brass", action_index=i):
+        with board.at("brass", point):
             pass  # run the measurement here
 
 

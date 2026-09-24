@@ -1,6 +1,7 @@
 from board_stage.board import Board, setup_board
 from board_stage.board_config import (
     Action,
+    ActionPoint,
     BoardConfig,
     BoardObject,
     CenterAction,
@@ -31,6 +32,7 @@ __all__ = [
     "Board",
     "setup_board",
     "Action",
+    "ActionPoint",
     "SinglePointAction",
     "CenterAction",
     "GridAction",

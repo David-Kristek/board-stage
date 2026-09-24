@@ -91,16 +91,31 @@ with Board(printer, board_config) as board:
     with board.at("solution"):
         pass  # dips in, then retracts on exit
 
-    for i in range(len(board.objects["brass"].local_action_points)):
-        with board.at("brass", action_index=i):
+    for point in board.action_points("brass"):
+        with board.at("brass", point):
             ...  # run your measurement here
 
     board.park()
 ```
 
 `board.at(object_id, ...)` raises to a safe Z, routes around other objects,
-descends onto the target, and retracts when the block exits. Pass
-`coords=(x, y)` for an ad-hoc point, or `descend=False` to just hover.
+descends onto the target, and retracts when the block exits. With no target it
+goes to the object's `default_action`; pass `point=<ActionPoint>` to visit one
+of its `action_points`, `coords=(x, y)` for an ad-hoc point, or `descend=False`
+to just hover.
+
+### Choosing a target
+
+`board.action_points(object_id)` (or `board.objects[object_id].action_points`)
+returns the object's resolved points in visit order, excluding `default_action`.
+Each carries its `index`, `action`, `local` and absolute `board` coordinates:
+
+```python
+for point in board.action_points("brass"):
+    print(point)  # ActionPoint('brass', index=0, local=(5.0, 30.0, 1.0), board=(135.0, 39.0, 1.0))
+    with board.at("brass", point):
+        ...  # visit this point
+```
 
 ### Calibration
 
@@ -127,7 +142,7 @@ plot_layout(board_config, highlight_id="brass")
 def cycle(printer, board):
     with board.at("solution"):
         pass
-    with board.at("brass", action_index=0):
+    with board.at("brass", point=board.action_points("brass")[0]):
         pass
 
 
@@ -173,6 +188,7 @@ from board_stage import (
     Board,
     setup_board,
     Action,
+    ActionPoint,
     SinglePointAction,
     CenterAction,
     GridAction,
