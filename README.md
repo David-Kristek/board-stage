@@ -22,8 +22,10 @@ Or with `uv`: `uv add --path ../board-stage board-stage`.
 
 ## Quickstart
 
-Describe the board once, then drive the pen to named objects. Action points are
-local to each object and translated to the board frame for you.
+Describe the board once, then drive the pen to named objects. The pen is the
+tool mounted on the printer's moving head, so `Pen(width=...)` describes how
+much clearance it needs. Action points are local to each object and translated
+to the board frame for you.
 
 ```python
 from board_stage import (
@@ -99,6 +101,7 @@ directly. More in [Path finding](docs/path-finding.md).
 | [Path finding](docs/path-finding.md) | keep-out zones, visibility graph + Dijkstra |
 | [Using the board](docs/workflow.md) | calibration, `at(...)`, routing |
 | [Simulation](docs/simulation.md) | `dry_run` and visualization |
+| [Adding your own printer](docs/custom-printer.md) | the printer interface, adapting another machine |
 
 Runnable example: [`examples/measurement_cycle.py`](examples/measurement_cycle.py).
 

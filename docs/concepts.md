@@ -104,8 +104,10 @@ point.board       # (135.0, 39.0, 1.0) absolute
 
 ## The pen and keep-out zones
 
-`Pen(width=...)` describes the tool. Each object's keep-out footprint is its
-rectangle grown by `margin + pen.width / 2`:
+The pen is the tool mounted on the printer's moving part — the head/gantry — so
+wherever the printer moves, the pen goes with it. `Pen(width=...)` is the tool's
+diameter: because the head sweeps a disc of that width, each object's keep-out
+footprint is its rectangle grown by `margin + pen.width / 2`:
 
 ```python
 obj.get_rect(pen)  # -> Rect, inflated for clearance

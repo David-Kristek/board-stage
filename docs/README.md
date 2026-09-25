@@ -10,6 +10,7 @@ ideas the code is built on.
 | [Path finding](path-finding.md) | Keep-out zones, visibility graph + Dijkstra, straight-line moves |
 | [Using the board](workflow.md) | The `Board` lifecycle: open, calibrate, `at(...)`, park, routing |
 | [Simulation](simulation.md) | Running cycles without hardware and drawing them |
+| [Adding your own printer](custom-printer.md) | The printer interface, adapting another machine |
 
 ## In one paragraph
 
