@@ -4,20 +4,18 @@ Whenever the pen moves, `Board` refuses to drag it through an object it would
 collide with. Instead it plans a collision-free route with `find_path` — a
 visibility graph + Dijkstra over 2D keep-out rectangles.
 
-![The planner routing around keep-out zones](images/routing.png)
+![The planner routing around a keep-out zone](images/routing.png)
 
-*To reach the bottom of `brass`, the pen avoids `solution` and the rack stacked
-above it. The red dashed line is what it would take to lift over the rack; the
-black line is the route it actually takes — around in XY.*
+*From `solution` to `brass` the direct move is blocked by `rack`; the black line
+is the route the planner takes around it.*
 
 ## Why route instead of lift?
 
-The Z axis is slow (a lead screw). Lifting the pen above a tall object's
-`safe_z`, crossing, and coming back down means a lot of Z travel: in the picture
-above, clearing the rack at `safe_z=110` from `Z=20` costs `2 x 90 = 180 mm` of
-slow Z. Detouring around it in XY costs essentially nothing extra (~2 mm here)
-and no Z at all. So keeping the pen at travel Z and going around is usually much
-faster — which is exactly what the planner does.
+The Z axis is slow (a lead screw). Lifting the pen over a tall object — climbing
+above its `safe_z`, crossing, and coming back down — adds a lot of slow Z travel,
+while detouring around it in XY is usually only a few millimetres longer and
+costs no Z at all. Staying at travel Z and going around is therefore faster,
+which is exactly what the planner does.
 
 ## When routing happens
 

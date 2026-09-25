@@ -6,10 +6,9 @@ Generic Ender 3 XY(Z) positioning library: raw motion, board-frame calibration, 
 
 ![The path planner routing around keep-out zones](docs/images/routing.png)
 
-*To reach the bottom of `brass`, the pen must get past `solution` and the rack on
-top of it. Lifting over the rack would add 180 mm of slow Z travel; the
-visibility-graph planner (`find_path`) instead routes around it in XY for ~2 mm
-more travel and no Z. See [Path finding](docs/path-finding.md).*
+*Moving from `solution` to `brass`, the direct path is blocked by `rack`. The
+planner (`find_path`) routes around the obstacle's keep-out zone instead of
+through it. See [Path finding](docs/path-finding.md).*
 
 ## Installation
 
