@@ -1,5 +1,5 @@
 """
-Hardware-free stand-in for Ender_3D.Ender3_printer. Mirrors just the
+Hardware-free stand-in for Printer. Mirrors just the
 interface Board needs (bed size, board-frame `current`,
 move_absolute/move_relative, block, calibrate) with no Serial connection,
 and records every commanded board-frame position so visualize.py can
@@ -17,7 +17,7 @@ class NullPrinter:
         self,
         origin: PrinterPoint = PrinterPoint(0, 0, 0),
         default: BoardPoint = BoardPoint(0, 0, 100),
-        bed_width: float = 220,
+        bed_width: float = 230,
         bed_height: float = 220,
     ):
         self.origin = origin

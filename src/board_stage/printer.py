@@ -85,14 +85,17 @@ class Printer:
     # Command sender
     # --------------------------------------------------
 
-    def _send_cmd(self, cmd):
+    def _send_cmd(self, cmd, timeout: float = 120.0):
         self.connection.write(f"{cmd}\n".encode("ASCII"))
         # print(f"{cmd} has been sent to {self.name}")
 
+        deadline = time.monotonic() + timeout
         while True:
             line = self.connection.readline().decode("ASCII").strip()
             if "ok" in line.lower():
                 break
+            if time.monotonic() > deadline:
+                raise TimeoutError(f"Timed out waiting for an 'ok' after sending {cmd!r}.")
 
     # --------------------------------------------------
     # Position tracking
@@ -174,7 +177,7 @@ class Printer:
                     if match:
                         values[axis] = float(match.group(1))
                 if len(values) == 3:
-                    # Používáme nový PrinterPoint místo Enum
+                    # Track the parsed position as a PrinterPoint (machine coordinates).
                     position = PrinterPoint(values["X"], values["Y"], values["Z"])
 
             if "ok" in line.lower():

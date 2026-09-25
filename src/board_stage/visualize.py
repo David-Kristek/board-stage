@@ -13,7 +13,7 @@ from board_stage.board import Board
 from board_stage.board_config import BoardConfig
 
 
-def plot_layout(board_config: BoardConfig, bed_width=220, bed_height=220, highlight_id=None):
+def plot_layout(board_config: BoardConfig, bed_width=230, bed_height=220, highlight_id=None):
     """
     Static top-down plot of a board layout: object footprints, their
     inflated keep-out margins, and action points. Takes just a BoardConfig --

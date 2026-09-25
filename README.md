@@ -2,6 +2,8 @@
 
 Generic Ender 3 XY(Z) positioning library: raw motion, board-frame calibration, and obstacle-avoiding routing between named board objects.
 
+> New here? See the short, concept-first [documentation](docs/README.md).
+
 ## Features
 
 - **Printer abstraction (`printer.py`)**: Serial communication with Ender 3, coordinate transformations between Base, Printer, and Board frames.
