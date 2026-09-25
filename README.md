@@ -2,41 +2,24 @@
 
 Generic Ender 3 XY(Z) positioning library: raw motion, board-frame calibration, and obstacle-avoiding routing between named board objects.
 
-> New here? See the short, concept-first [documentation](docs/README.md).
+> Concept-first guide: [`docs/`](docs/README.md). This README is just install and a quick taste.
 
-## Features
+![The path planner routing around keep-out zones](docs/images/routing.png)
 
-- **Printer abstraction (`printer.py`)**: Serial communication with Ender 3, coordinate transformations between Base, Printer, and Board frames.
-- **Board & Object configuration (`board_config.py`)**: Define physical board objects (samples, tubes, wash stations) and action points.
-- **Board Controller (`board.py`)**: High-level movement orchestration, safety checks, and `setup_board` calibration.
-- **Path Planning (`path_planning.py`)**: Visibility-graph routing with obstacle avoidance across defined board objects.
-- **Simulation (`sim.py`, `visualize.py`)**: Dry-run execution and Matplotlib visualization of planned paths.
+*To reach the bottom of `brass`, the pen must get past `solution` and the rack on
+top of it. Lifting over the rack would add 180 mm of slow Z travel; the
+visibility-graph planner (`find_path`) instead routes around it in XY for ~2 mm
+more travel and no Z. See [Path finding](docs/path-finding.md).*
 
 ## Installation
 
 ```bash
-pip install -e .
+pip install -e .              # core
+pip install -e ".[plot]"      # + matplotlib visualization
+pip install -e ".[dev]"       # + ruff
 ```
 
-Or using `uv`:
-
-```bash
-uv add --path ../board-stage board-stage
-```
-
-Plotting extras for `visualize.py`:
-
-```bash
-pip install -e ".[plot]"
-```
-
-## Development
-
-```bash
-pip install -e ".[dev]"
-ruff format .
-ruff check .
-```
+Or with `uv`: `uv add --path ../board-stage board-stage`.
 
 ## Quickstart
 
@@ -57,30 +40,20 @@ from board_stage import (
     setup_board,
 )
 
-brass = BoardObject(
-    id="brass",
-    x=130.0,
-    y=9.0,
-    width=99.0,
-    height=65.0,
-    safe_z=10.0,
-    actions=[GridAction(start=BoardPoint(x=5.0, y=30.0), end=BoardPoint(x=95.0, y=30.0), steps=10, z=1.0)],
-)
-
 board_config = BoardConfig(
     pen=Pen(width=2.0),
     objects={
         "solution": BoardObject(
             id="solution",
-            x=0.0,
-            y=0.0,
-            width=40.0,
-            height=40.0,
-            safe_z=55.0,
-            margin=5.0,
+            x=0.0, y=0.0, width=40.0, height=40.0,
+            safe_z=55.0, margin=5.0,
             default_action=SinglePointAction(point=BoardPoint(x=25.0, y=25.0, z=23.0)),
         ),
-        "brass": brass,
+        "brass": BoardObject(
+            id="brass",
+            x=130.0, y=9.0, width=99.0, height=65.0, safe_z=10.0,
+            actions=[GridAction(start=BoardPoint(x=5.0, y=30.0), end=BoardPoint(x=95.0, y=30.0), steps=10, z=1.0)],
+        ),
     },
 )
 
@@ -100,80 +73,41 @@ with Board(printer, board_config) as board:
     board.park()
 ```
 
-`board.at(object_id, ...)` raises to a safe Z, routes around other objects,
-descends onto the target, and retracts when the block exits. With no target it
-goes to the object's `default_action`; pass `point=<ActionPoint>` to visit one
-of its `action_points`, `coords=(x, y)` for an ad-hoc point, or `descend=False`
-to just hover.
+`board.at(...)` raises to a safe Z, routes around other objects, descends onto
+the target, and retracts when the block exits. With no target it uses the
+object's `default_action`; pass `point=`, `coords=(x, y)`, or `descend=False`.
 
-### Choosing a target
+## Dry run
 
-`board.action_points(object_id)` (or `board.objects[object_id].action_points`)
-returns the object's resolved points in visit order, excluding `default_action`.
-Each carries its `index`, `action`, `local` and absolute `board` coordinates:
+![A simulated dip, dry and measure cycle](docs/images/cycle.gif)
 
-```python
-for point in board.action_points("brass"):
-    print(point)  # ActionPoint('brass', index=0, local=(5.0, 30.0, 1.0), board=(135.0, 39.0, 1.0))
-    with board.at("brass", point):
-        ...  # visit this point
-```
+*The same cycle replayed with no printer attached — `dry_run` records every move
+and `animate` plays it back in 3D. See [Simulation](docs/simulation.md).*
 
-### Calibration
+## Path finding
 
-`setup_board` hovers above a reference object and asks whether the pen is over
-it; if not (or `force_calibrate=True`) it homes and checks again, raising
-`ValueError` if it still doesn't line up. Pass `confirm`/`notify` to drive it
-from a UI or test instead of the terminal:
+While the pen travels below an object's `safe_z`, that object's inflated
+footprint becomes a keep-out zone and the move is rerouted around it with a
+visibility graph + Dijkstra (`find_path`). Above `safe_z`, moves are straight
+lines. The `Board` does this for you; `find_path` is public if you want it
+directly. More in [Path finding](docs/path-finding.md).
 
-```python
-setup_board(board, reference_id="solution")
-```
+## Documentation
 
-## Dry run and visualization
+| Doc | Covers |
+| --- | --- |
+| [Core concepts](docs/concepts.md) | frames, board objects, actions, keep-out zones |
+| [Path finding](docs/path-finding.md) | keep-out zones, visibility graph + Dijkstra |
+| [Using the board](docs/workflow.md) | calibration, `at(...)`, routing |
+| [Simulation](docs/simulation.md) | `dry_run` and visualization |
 
-Run the same cycle with no printer:
+Runnable example: [`examples/measurement_cycle.py`](examples/measurement_cycle.py).
 
-```python
-from board_stage import dry_run
-from board_stage.visualize import animate, plot_layout
+## Development
 
-plot_layout(board_config, highlight_id="brass")
-
-
-def cycle(printer, board):
-    with board.at("solution"):
-        pass
-    with board.at("brass", point=board.action_points("brass")[0]):
-        pass
-
-
-board = dry_run(board_config, cycle, bed_width=230)
-animate(board.printer.history, board, board.printer, highlight_id="brass")
-```
-
-`dry_run` catches layout bugs (overlaps, out-of-bounds points, unreachable
-routes, a pen parked in a keep-out zone) before any hardware is connected.
-
-See [`examples/measurement_cycle.py`](examples/measurement_cycle.py) for a fuller
-runnable version.
-
-## Project layout
-
-```text
-board-stage/
-├── pyproject.toml
-├── examples/
-│   └── measurement_cycle.py
-└── src/
-    └── board_stage/
-        ├── __init__.py        # public API
-        ├── printer.py
-        ├── board_config.py
-        ├── board.py
-        ├── path_planning.py
-        ├── sim.py
-        └── visualize.py
+```bash
+ruff format .
+ruff check .
 ```
 
 ## Public API

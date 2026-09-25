@@ -26,6 +26,11 @@ It returns the `Board`, so `board.printer.history` is the recorded route. Extra
 keyword arguments (`bed_width`, `bed_height`, `origin`, `default`) go to the
 `NullPrinter`.
 
+![A simulated dip, dry and measure cycle](images/cycle.gif)
+
+*A simulated dip → dry → measure cycle replayed from the recorded history — no
+hardware attached.*
+
 ## Visualizing
 
 With the `plot` extra installed (`pip install -e ".[plot]"`):

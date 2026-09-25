@@ -7,6 +7,7 @@ ideas the code is built on.
 | Doc | What it covers |
 | --- | --- |
 | [Core concepts](concepts.md) | Frames, points, board objects, actions, the pen, keep-out zones |
+| [Path finding](path-finding.md) | Keep-out zones, visibility graph + Dijkstra, straight-line moves |
 | [Using the board](workflow.md) | The `Board` lifecycle: open, calibrate, `at(...)`, park, routing |
 | [Simulation](simulation.md) | Running cycles without hardware and drawing them |
 
@@ -34,7 +35,7 @@ with Board(printer, board_config) as board:
 
 - **Frame** – a coordinate system. `BoardPoint` vs `PrinterPoint`.
 - **BoardObject** – a rectangle on the bed with a name.
-- **Action** – a recipe for points inside an object.
+- **Action** – a recipe that resolves to points inside an object (local coordinates).
 - **ActionPoint** – one resolved point, in both local and board coordinates.
 - **safe_z** – the Z at or above which it is safe to pass over an object.
 - **keep-out** – an object's footprint inflated by its margin and the pen

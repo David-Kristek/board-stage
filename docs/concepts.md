@@ -1,91 +1,106 @@
 # Core concepts
 
-## Two coordinate frames
+## Coordinate frames
 
-Everything positions in one of two frames:
-
-- **Board frame** – millimetres measured from the **bottom-left corner of the
-  board**. `Z = 0` means the pen is touching the board surface.
-- **Printer frame** – the Ender's own machine coordinates.
-
-These are *not* interchangeable, so points are tagged with their frame:
+Points are tagged with the frame they belong to, so a mix-up fails loudly:
 
 | Type | Frame |
 | --- | --- |
-| `BoardPoint` | Board |
-| `PrinterPoint` | Printer |
-| `BasePoint` | Shared base class (has `x`, `y`, `z`) |
+| `BoardPoint` | Board (millimetres from the board's bottom-left corner; `Z = 0` touches the surface) |
+| `PrinterPoint` | The Ender's own machine coordinates |
 
-Adding or subtracting points from different frames raises a `TypeError`, so mix
-ups surface immediately instead of moving the pen somewhere wrong. `Point` is a
-backwards-compatible alias for `BoardPoint`.
+Adding or subtracting points from different frames raises a `TypeError`. `Point`
+is a backwards-compatible alias for `BoardPoint`.
 
-### The bridge: `origin`
-
-The link between the frames is a single `PrinterPoint` called `origin`. It says:
-
-- where the board's `(0, 0)` sits in machine coordinates, and
-- which machine Z corresponds to the pen touching the board (`board Z = 0`).
-
-```python
-printer = Ender3_printer("/dev/ttyUSB0", origin=PrinterPoint(6.0, -14.0, 13.0))
-```
-
-The conversions are:
-
-```text
-printer = (board.x - origin.x, board.y - origin.y, board.z + origin.z)
-board   = (printer.x + origin.x, printer.y + origin.y, printer.z - origin.z)
-```
-
-You normally only ever talk in the **board frame**. The `Board` converts for you
-when it sends G-code.
+The Printer's `origin` (a `PrinterPoint`) bridges the two. It is the pen's
+starting reference: it says where the board's `(0, 0)` sits in machine
+coordinates, and which machine Z touches the board. You work in the board frame
+only — the `Board` converts when it sends G-code.
 
 ## Board objects
 
 A `BoardObject` is a named rectangle on the bed – a sample, a tube, a wash
 station. Positions are in the board frame.
 
+![Example board layout](images/layout.png)
+
+*Three objects with their keep-out margins (dashed) and action points (triangles).*
+
 | Field | Meaning |
 | --- | --- |
 | `id` | Name, also the key in `BoardConfig.objects` |
-| `x`, `y` | Board-frame position of the object's bottom-left corner |
+| `x`, `y` | Distance from the board's bottom-left corner to the object's bottom-left corner |
 | `width`, `height` | Size of the rectangle (must be > 0) |
 | `safe_z` | Z at or above which the pen can safely pass over the object |
 | `margin` | Extra clearance added around the footprint |
 | `default_action` | Where to go when no specific point is given |
 | `actions` | The list of points to visit (see below) |
 
-Objects also know their own **local frame**: `(0, 0)` is the object's bottom-left
+`x` and `y` are **measured distances on the physical board**: from the
+bottom-left corner of the board (where the pen starts) to the bottom-left corner
+of the object. The pen's own starting offset is folded into the `origin`, so you
+measure the distance and enter that number directly, without adding any offset
+yourself.
+
+Each object also has a **local frame**: `(0, 0)` is the object's bottom-left
 corner. Action points are written in local coordinates and must stay inside the
 rectangle; the library checks this when the object is created.
 
-## Actions
+## Actions in depth
 
-An `Action` is a recipe that produces points inside an object, in local
-coordinates. Built-in actions:
+An `Action` is a reusable recipe that produces one or more points **inside an
+object, in local coordinates** (`(0, 0)` = the object's bottom-left corner, `z` =
+height above the board surface). Attach them with `actions=[...]`; the
+`default_action` is the fallback used when no specific point is requested.
 
-| Action | Produces |
-| --- | --- |
-| `SinglePointAction(point=BoardPoint(...))` | Exactly that one point |
-| `CenterAction(z=...)` | The object's centre at height `z` |
-| `GridAction(start=..., end=..., steps=..., z=...)` | `steps` points evenly spaced from `start` to `end` (inclusive) at height `z` |
+Every action implements `resolve(obj) -> Sequence[BoardPoint]`. The object then
+turns each returned point into a resolved `ActionPoint` (see below). The built-in
+actions:
 
-`.resolve(obj)` turns an action into `BoardPoint`s in the object's local frame.
-The `BoardObject` then exposes resolved **`ActionPoint`s**, which carry both
-frames at once:
+| Action | `resolve` returns | Use for |
+| --- | --- | --- |
+| `SinglePointAction(point=BoardPoint(...))` | That one point | A fixed spot (a dip, a reference) |
+| `CenterAction(z=...)` | `(width/2, height/2, z)` | "Go to the middle of the object" |
+| `GridAction(start=..., end=..., steps=..., z=...)` | `steps` points evenly spaced from `start` to `end`, inclusive, all at height `z` | Scanning a line of measurement spots |
+
+Details worth knowing:
+
+- **`SinglePointAction`** carries its own `z` on the point; nothing is recomputed.
+- **`CenterAction`** computes the centre from `width`/`height`, so it tracks the
+  object if you move or resize it. `z` is required.
+- **`GridAction`** takes `start`/`end` as local `BoardPoint`s but only uses their
+  `x`/`y`; every generated point sits at `z`. Both endpoints are included, and
+  `steps=1` returns just `start`. `steps` must be `>= 1`.
+- **Custom actions** just subclass `Action` and implement `resolve`; return any
+  number of local points:
+
+  ```python
+  class DiagonalAction(Action):
+      def resolve(self, obj):
+          return [BoardPoint(x=0, y=0, z=1), BoardPoint(x=obj.width, y=obj.height, z=1)]
+  ```
+
+## Action points
+
+`obj.action_points` (or `board.action_points(object_id)`) resolves `actions` **in
+order**, so the list is also the visit order. Each `ActionPoint` carries both
+frames plus its provenance:
 
 ```python
 point = board.action_points("brass")[0]
 point.object_id   # 'brass'
-point.index       # 0
-point.action      # the Action that created it
+point.index       # 0 — position in visit order
+point.action      # the Action that produced it
 point.local       # (5.0, 30.0, 1.0)   object-relative
 point.board       # (135.0, 39.0, 1.0) absolute
 ```
 
-The `default_action` is the fallback target and is **not** included in
-`action_points`.
+- The `default_action` is **not** included in `action_points`; it is the fallback
+  target, available separately as `default_action_point`.
+- Local points are validated at construction to satisfy `0 <= x <= width` and
+  `0 <= y <= height`, so a typo fails before anything moves.
+- `local_action_points` and `board_action_points` give just the coordinates.
+- Visit them with `board.at(object_id, point)`.
 
 ## The pen and keep-out zones
 
